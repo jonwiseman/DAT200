@@ -100,7 +100,7 @@ def main():
     league = pd.DataFrame([[1, 'family'], [2, 'competitive']], columns=['leagueID', 'leagueType'])
     league.set_index('leagueID')
 
-    league.to_csv(r'../Data/CSV/leagues.csv', header=False)
+    league.to_csv(r'../Data/CSV/leagues.csv', header=False, index=False)
 
     l1_qbs = sample(list(offense[offense['position'] == 'QB']['playerID'].unique()), len(league1))
     l1_rbs = sample(list(offense[offense['position'] == 'RB']['playerID'].unique()), 2 * len(league1))
@@ -118,22 +118,29 @@ def main():
     contract['startWeek'] = 1
     contract['endWeek'] = 16
     contract['isActive'] = 1
+    contract['owner'] = contract['owner'].apply(name_to_id)
 
-    user = pd.DataFrame([(name.split(' ')[0], name.split(' ')[1]) for name in generated_names],
-                        columns=['nameFirst', 'nameLast'])
-    user['userID'] = list(range(len(generated_names)))
+    user = pd.DataFrame(
+        [(name.split(' ')[0], name.split(' ')[1], name.split(' ')[1].lower() + name.split(' ')[0].lower()[:3])
+         for name in generated_names],
+        columns=['nameFirst', 'nameLast', 'userID'])
     user.to_csv(r'../Data/CSV/users.csv', index=False, header=False)
 
     leagues1 = {name: 1 for name in league1}
     leagues2 = {name: 2 for name in league2}
 
     leagues1.update(leagues2)
-    teams = pd.DataFrame([(f'Team{number}', name, leagues1[name]) for number, name in enumerate(generated_names)],
+    teams = pd.DataFrame([(f'Team{number}', name.split(' ')[1].lower() + name.split(' ')[0].lower()[:3], leagues1[name])
+                          for number, name in enumerate(generated_names)],
                          columns=['teamID', 'userID', 'leagueID'])
     teams.to_csv(r'../Data/CSV/team.csv', index=False, header=False)
 
-    real_contracts = pd.merge(contract, teams.rename({'userID': 'owner'}, axis=1), on='owner').drop('owner', axis=1)
+    real_contracts = pd.merge(contract, teams.rename({'userID': 'owner'}, axis=1), on='owner').drop(['owner', 'leagueID'], axis=1)
     real_contracts.to_csv(r'../Data/CSV/contracts.csv', index=False, header=False)
+
+
+def name_to_id(name):
+    return name.split(' ')[1].lower()+name.split(' ')[0].lower()[:3]
 
 
 if __name__ == '__main__':
